@@ -1,0 +1,22 @@
+// sourcery:file:MemberwiseInitializer+initialized.generated.swift
+
+import Foundation
+<%
+func getType(_ type: Variable) -> String {
+    guard let defaultValue = type.defaultValue else {
+        return "\(type.name): \(type.typeName.name)"
+    }
+    return "\(type.name): \(type.typeName.name) = \(defaultValue)"
+}
+%>
+
+<%_ types.structs.filter({ $0.annotations["Domain"] != nil || $0.annotations["Data"] != nil}).forEach { type in -%>
+<% var storedVariables = type.storedVariables %>
+<% var parameters = storedVariables.map { getType($0) } %>
+extension <%= type.name %> {
+    <%= type.accessLevel %> static func initialized(<%= parameters.joined(separator: ", ") %>) -> <%= type.name %> {
+        <%= type.name %>(<%= storedVariables.map { "\($0.name): \($0.name)" }.joined(separator: ", ") %>)
+    }
+}
+<%_ } %>
+// sourcery:end

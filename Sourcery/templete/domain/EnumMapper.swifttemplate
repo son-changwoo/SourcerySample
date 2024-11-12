@@ -1,0 +1,49 @@
+// sourcery:file:Enum+Mapper.generated.swift
+
+import Foundation
+import Domain
+
+<%
+func parse(_ remoteType: EnumCase, _ dataCase: Enum) -> String {
+    for dataType in dataCase.cases {
+        if let mapValue = dataType.annotations["map"] as? String, mapValue == dataType.name {
+            return "case .\(remoteType.name): return .\(mapValue)"
+        } else if remoteType.name == dataType.name {
+            return "case .\(remoteType.name): return .\(dataType.name)"
+        }
+    }
+    return "case .\(remoteType.name): return \(dataCase.annotations["default"] as? String ?? "nil")"
+}
+
+
+func getRemote(_ name: String) -> Enum {
+    types.enums.filter({ $0.annotations["Data"] != nil }).first(where: { $0.name == name })!
+}
+%>
+
+<%_ types.enums.filter({ $0.annotations["Domain"] != nil && $0.annotations["mapping"] != nil }).forEach { dataType in -%>
+<% let mappingTypeName = dataType.annotations["mapping"] as! String %>
+<% let remote = getRemote(mappingTypeName) %>
+public extension <%= mappingTypeName %> {
+    <%_ if dataType.annotations["default"] == nil { -%>
+    func toDomain() -> <%= dataType.name %>? {
+    <%_ } else { -%>
+    func toDomain() -> <%= dataType.name %> {
+    <%_ } %>
+        switch self {
+        <%_ remote.cases.forEach { remoteType in -%>
+        <%= parse(remoteType, dataType) %>
+        <%_ } %>
+        }
+    }
+}
+
+public extension Array where Element == <%= mappingTypeName %> {
+    func toDomain() -> [<%= dataType.name %>] {
+        compactMap { $0.toDomain() }
+    }
+}
+<%_ } %>
+
+
+// sourcery:end

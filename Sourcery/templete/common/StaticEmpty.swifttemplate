@@ -1,0 +1,52 @@
+// sourcery:file:Model+Empty.generated.swift
+
+import Foundation
+
+<%
+func getEmptyValue(_ variable: Variable) -> String {
+    
+    if (variable.isOptional) {
+        return "nil"
+    } else if (variable.typeName.name == "String") {
+        return "\"\""
+    } else if (variable.typeName.name == "Int") {
+        return "0"
+    } else if (variable.typeName.name == "Float") {
+        return "0.0"
+    } else if (variable.typeName.name == "Double") {
+        return "0.0"
+    } else if (variable.typeName.name == "Bool") {
+        return "false"
+    } else if (variable.typeName.name == "Date") {
+        return "Date()"
+    } else if (variable.isArray) {
+        return "[]"
+    } else if let type = variable.type, type.kind == "enum" {
+        let enumTypeName = variable.typeName.name
+        if let enumType = types.enums.first(where: { $0.name == enumTypeName }) {
+            if let firstCase = enumType.cases.first {
+                return "\(enumTypeName).\(firstCase.name)"
+            }
+        }
+        return "nil"
+    } else {
+        return ".empty"
+    }
+}
+
+func getType(_ type: Variable, _ value: String) -> String {
+    guard let defaultValue = type.defaultValue else {
+        return "\(type.name): \(value)"
+    }
+    return "\(type.name): \(defaultValue)"
+}
+%>
+
+<%_ types.structs.filter({ $0.annotations["Empty"] != nil }).forEach { type in -%>
+<% var storedVariables = type.storedVariables %>
+<% var parameters = storedVariables.map { getType($0, getEmptyValue($0)) } %>
+extension <%= type.name %> {
+    <%= type.accessLevel %> static let empty = <%= type.name %>(<%= parameters.joined(separator: ", ") %>)
+}
+<%_ } %>
+// sourcery:end

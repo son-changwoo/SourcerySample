@@ -1,0 +1,34 @@
+configurations:
+  - sources:
+    - Layers/Data/Sources/
+    - Layers/Remote/Sources/
+    templates:
+      - Sourcery/templete/data/ModelMapper.swifttemplate
+      - Sourcery/templete/data/EnumMapper.swifttemplate
+    output:
+      Layers/Remote/Sources/Generated/
+
+  - sources:
+    - Layers/Data/Sources/
+    templates:
+      - Sourcery/templete/common/StaticEmpty.swifttemplate
+      - Sourcery/templete/common/MemberwiseInitializer.swifttemplate
+    output:
+      Layers/Data/Sources/Generated/
+
+  - sources:
+    - Layers/Domain/Sources/
+    templates:
+      - Sourcery/templete/common/StaticEmpty.swifttemplate
+      - Sourcery/templete/common/MemberwiseInitializer.swifttemplate
+    output:
+      Layers/Domain/Sources/Generated/
+
+  - sources:
+    - Layers/Data/Sources/
+    - Layers/Domain/Sources/
+    templates:
+      - Sourcery/templete/domain/ModelMapper.swifttemplate
+      - Sourcery/templete/domain/EnumMapper.swifttemplate
+    output:
+      Layers/Data/Sources/Generated/

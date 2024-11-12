@@ -1,0 +1,131 @@
+// sourcery:file:RemoteToData+Mapper.generated.swift
+
+<%
+func getEmptyValue(_ variable: Variable) -> String {
+    if variable.isOptional {
+        return "nil"
+    } else if variable.typeName.name == "String" {
+        return "\"\""
+    } else if variable.typeName.name == "Int" {
+        return "0"
+    } else if variable.typeName.name == "Float" || variable.typeName.name == "Double" {
+        return "0.0"
+    } else if variable.typeName.name == "Bool" {
+        return "false"
+    } else if variable.typeName.name == "Date" {
+        return "Date()"
+    } else if variable.isArray {
+        return "[]"
+    } else if let type = variable.type, type.kind == "enum" {
+        let enumTypeName = variable.typeName.name
+        if let enumType = types.enums.first(where: { $0.name == enumTypeName }) {
+            if let firstCase = enumType.cases.first {
+                return "\(enumTypeName).\(firstCase.name)"
+            }
+        }
+        return "nil"
+    } else {
+        return ".empty"
+    }
+}
+
+func sameType(_ lhsType: Variable, _ rhsType: Variable) -> Bool {
+    let lhsTypeName = lhsType.typeName.name.replacingOccurrences(of: "?", with: "")
+    let rhsTypeName = rhsType.typeName.name.replacingOccurrences(of: "?", with: "")
+    return lhsTypeName == rhsTypeName
+}
+
+func mapping(_ data: Variable, _ remote: Variable) -> String? {
+    var result = "\(data.name): "
+
+    if let mapName = data.annotations["map"] as? String, remote.name == mapName {
+        result += "\(mapName)"
+    } else if let functionName = data.annotations["function"] as? String {
+        result += functionName
+        return result
+    } else if data.name == remote.name {
+        result += "\(remote.name)"
+    }
+
+    if result == "\(data.name): " {
+        if let defaultValue = data.defaultValue {
+            result += "\(defaultValue)"
+            return result
+        }
+        return nil
+    }
+    
+    if let convert = data.annotations["convert"] as? String {
+        if remote.isOptional {
+            result += "?"
+        }
+        result += ".\(convert)"
+        return result
+    }
+    
+
+    switch (data.isOptional, remote.isOptional, sameType(data, remote)) {
+    case (true, true, true):
+        break
+    case (true, true, false), (false, true, false):
+        result += "?.toData()"
+        if let defaultValue = data.annotations["default"] as? String {
+            result += " ?? \(defaultValue)"
+        }
+    case (true, false, true):
+        break
+    case (true, false, false):
+        result += ".toData()"
+    case (false, true, true):
+        result += " ?? \(getEmptyValue(data))"
+    case (false, false, true):
+        break
+    case (false, false, false):
+        result += ".toData()"
+    }
+
+    return result
+}
+    
+
+func getParameters(_ lhs: Type, _ rhs: Type) -> [String] {
+    var list = [String]()
+    for lv in lhs.storedVariables {
+        for rv in rhs.storedVariables {
+            if let result = mapping(lv, rv) {
+                list.append(result)
+                break
+            }
+        }
+    }
+    return list
+}
+
+func getRemote(_ name: String) -> Struct {
+    return types.structs.filter({ $0.annotations["Remote"] != nil }).first(where: { $0.name == name })!
+}
+%>
+
+import Foundation
+import Data
+
+<%_ types.structs.filter({ $0.annotations["Data"] != nil && $0.annotations["mapping"] != nil }).forEach { data in -%>
+<% let typeName = data.annotations["mapping"] as! String %>
+<% let remote = getRemote(typeName) %>
+public extension <%= remote.name %> {
+    func toData() -> <%= data.name %> {
+        <%= data.name %>
+            .initialized(
+                <%= getParameters(data, remote).joined(separator: ",\n\t\t\t\t") %>
+            )
+    }
+}
+public extension Array where Element == <%= remote.name %> {
+    func toData() -> [<%= data.name %>] {
+        map { $0.toData() }
+    }
+}
+<%_ } %>
+
+
+// sourcery:end
